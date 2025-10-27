@@ -1,0 +1,37 @@
+{
+  "name": "dokicasa-integration",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NestJS microservice to integrate Zappyrent with Dokicasa API (forms + document creation)",
+  "scripts": {
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "build": "nest build"
+  },
+  "dependencies": {
+    "@nestjs/axios": "^4.0.1",
+    "@nestjs/common": "^10.3.0",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^10.3.0",
+    "@nestjs/platform-express": "^10.3.0",
+    "axios": "^1.12.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.0",
+    "dotenv": "^16.4.5",
+    "rxjs": "^7.8.1",
+    "supertest": "^7.1.4"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^10.3.0",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.30",
+    "@types/supertest": "^6.0.3",
+    "eslint": "^9.12.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.3.3"
+  }
+}
