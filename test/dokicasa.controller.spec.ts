@@ -7,7 +7,10 @@ import { HttpService } from '../src/http/http.service';
 describe('DokicasaController (e2e-like legacy fixed)', () => {
   let app: INestApplication;
   const httpMock = {
-    instance: { post: jest.fn() }
+    instance: {
+      get: jest.fn(),
+      post: jest.fn()
+    }
   } as unknown as HttpService;
 
   beforeAll(async () => {
@@ -39,6 +42,16 @@ describe('DokicasaController (e2e-like legacy fixed)', () => {
       contract_type: 'locazione-3-2-canone',
       fields: {}
     };
+
+    // Mock GET to return form schema with required fields
+    (httpMock.instance.get as jest.Mock).mockResolvedValueOnce({
+      data: {
+        form: {
+          field1: { question: 'Q1', type: 'varchar', is_required: 1 },
+          field2: { question: 'Q2', type: 'varchar', is_required: 1 },
+        }
+      }
+    });
 
     await request(app.getHttpServer())
       .post('/api/v1/submit-contract-info')

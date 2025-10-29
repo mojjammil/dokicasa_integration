@@ -9,6 +9,7 @@ describe('DokicasaService (legacy folder fixed)', () => {
 
   const httpMock = {
     instance: {
+      get: jest.fn(),
       post: jest.fn()
     }
   } as unknown as HttpService;
@@ -32,6 +33,65 @@ describe('DokicasaService (legacy folder fixed)', () => {
   });
 
   it('submitContractInfo works (smoke)', async () => {
+    // Mock GET responses for form schemas
+    (httpMock.instance.get as jest.Mock)
+      .mockResolvedValueOnce({
+        data: {
+          form: {
+            tipologia_locazione_11: { question: 'Q1', type: 'varchar', is_required: 1 },
+            mobilio_porzione_11: { question: 'Q2', type: 'varchar', is_required: 1 },
+            spazi_comuni_31: { question: 'Q3', type: 'varchar', is_required: 1 },
+            durata_anni_2: { question: 'Q4', type: 'varchar', is_required: 1 },
+            data_decorrenza_locazione_3_1_3_3: { question: 'Q5', type: 'varchar', is_required: 1 },
+            importo_mensile_locazione_6: { question: 'Q6', type: 'varchar', is_required: 1 },
+            pagamento_canone_3_2: { question: 'Q7', type: 'varchar', is_required: 1 },
+            metodo_pagamento_34: { question: 'Q8', type: 'varchar', is_required: 1 },
+            domanda_spese_condominiali_1: { question: 'Q9', type: 'varchar', is_required: 1 },
+            spese_4_2: { question: 'Q10', type: 'varchar', is_required: 1 },
+            domanda_utenze_6: { question: 'Q11', type: 'varchar', is_required: 1 },
+            utenze_12: { question: 'Q12', type: 'varchar', is_required: 1 },
+            domanda_cauzione_15: { question: 'Q13', type: 'varchar', is_required: 1 },
+            cauzione_locazione_12: { question: 'Q14', type: 'varchar', is_required: 1 },
+            garanzie_accessorie_5_2: { question: 'Q15', type: 'varchar', is_required: 1 },
+            domanda_garante_19: { question: 'Q16', type: 'varchar', is_required: 1 },
+            garante_dati_19: { question: 'Q17', type: 'varchar', is_required: 1 },
+            domanda_recesso_conduttore_2: { question: 'Q18', type: 'varchar', is_required: 1 },
+            recesso_conduttore_1_2: { question: 'Q19', type: 'varchar', is_required: 1 },
+            cedolare_secca_6: { question: 'Q20', type: 'varchar', is_required: 1 },
+            mobilio_12_2: { question: 'Q21', type: 'varchar', is_required: 1 },
+            domanda_elenco_arredi_intero_1: { question: 'Q22', type: 'varchar', is_required: 1 },
+            elenco_arredi_lista_intero_1: { question: 'Q23', type: 'varchar', is_required: 1 },
+            domanda_elenco_arredi_porzione: { question: 'Q24', type: 'varchar', is_required: 1 },
+            elenco_arredi_lista_porzione: { question: 'Q25', type: 'varchar', is_required: 1 },
+            comune_immobile_7: { question: 'Q26', type: 'varchar', is_required: 1 },
+            blocco_immobile_24: { question: 'Q27', type: 'varchar', is_required: 1 },
+            domanda_pertinenze_14_2: { question: 'Q28', type: 'varchar', is_required: 1 },
+            pertinenze_16_2: { question: 'Q29', type: 'varchar', is_required: 1 },
+            domanda_ape_1: { question: 'Q30', type: 'varchar', is_required: 1 },
+            numero_attestato_prestazione_energetica_3: { question: 'Q31', type: 'varchar', is_required: 1 },
+            locatore_4_3: { question: 'Q32', type: 'varchar', is_required: 1 },
+            conduttore_4_3: { question: 'Q33', type: 'varchar', is_required: 1 },
+            domanda_note_50: { question: 'Q34', type: 'varchar', is_required: 1 },
+            note_49: { question: 'Q35', type: 'varchar', is_required: 1 },
+            luogo_di_sottoscrizione_contratto_4_2: { question: 'Q36', type: 'varchar', is_required: 1 },
+            data_di_sottoscrizione_contratto_4_2: { question: 'Q37', type: 'varchar', is_required: 1 },
+          }
+        }
+      }) // Step 3 GET
+      .mockResolvedValueOnce({
+        data: {
+          form: {
+            tipologia_locazione_20: { question: 'C1', type: 'varchar', is_required: 1 },
+            indicazione_stanza: { question: 'C2', type: 'varchar', is_required: 1 },
+            tipologia_contratto_14: { question: 'C3', type: 'varchar', is_required: 1 },
+            domanda_arredi: { question: 'C4', type: 'varchar', is_required: 1 },
+            domanda_note_22: { question: 'C5', type: 'varchar', is_required: 1 },
+            note_34_5_1_1_1_2_1_1: { question: 'C6', type: 'varchar', is_required: 1 },
+          }
+        }
+      }); // Step 4 GET
+
+    // Mock POST responses
     (httpMock.instance.post as jest.Mock)
       .mockResolvedValueOnce({ data: { id: 'FORM1' } })
       .mockResolvedValueOnce({ data: { documentId: 'DOC1' } });

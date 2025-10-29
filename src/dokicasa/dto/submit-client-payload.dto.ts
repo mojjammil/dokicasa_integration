@@ -1,4 +1,4 @@
-import { IsIn, IsObject, IsOptional } from 'class-validator';
+import { IsIn, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class SubmitClientPayloadDto {
   @IsIn(['milano', 'roma', 'torino'], { message: 'city must be one of milano|roma|torino' })
@@ -18,4 +18,19 @@ export class SubmitClientPayloadDto {
   @IsOptional()
   @IsObject()
   creation_fields?: Record<string, any>;
+
+  /** Optional: external identifier propagated to Dokicasa metadata */
+  @IsOptional()
+  @IsString()
+  external_id?: string;
+
+  /** Optional: session identifier propagated to Dokicasa metadata */
+  @IsOptional()
+  @IsString()
+  session_id?: string;
+
+  /** Optional: traffic source propagated to Dokicasa metadata */
+  @IsOptional()
+  @IsString()
+  source?: string;
 }

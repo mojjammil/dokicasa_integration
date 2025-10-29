@@ -9,6 +9,7 @@ describe('DokicasaService', () => {
 
   const httpMock = {
     instance: {
+      get: jest.fn(),
       post: jest.fn()
     }
   } as unknown as HttpService;
@@ -37,117 +38,127 @@ describe('DokicasaService', () => {
     city: 'milano' as const,
     contract_type: 'locazione-3-2-canone' as const,
     fields: {
-      tipologia_locazione_11_5: "Il Contratto riguarda l'intero immobile",
-      mobilio_porzione_11_5: "Si, la porzione è arredata",
-      spazi_comuni_31_6: "Si",
-      durata_anni_2_6: '3+2',
-      data_decorrenza_locazione_3_1_3_3_6: '2025-11-01',
-      importo_mensile_locazione_6_5: 1000,
-      pagamento_canone_3_2_6: 5,
-      metodo_pagamento_34_6: 'Tramite bonifico bancario',
-      domanda_spese_condominiali_1_5: 'Non ci sono spese condominiali (o non vengono richieste)',
-      spese_4_2_6: 50,
-      domanda_utenze_6_3: "L'Inquilino si intesterà personalmente tutti i Contratti delle utenze",
-      utenze_12_3: 'Luce',
-      domanda_cauzione_15_5: 'No, il Conduttore non rilascia alcuna cauzione',
-      cauzione_locazione_12_5: 1000,
-      garanzie_accessorie_5_2_6: 'No, non sono previste garanzie accessorie',
-      domanda_garante_19_2: 'No, compilerò successivamente una Scrittura Privata a parte',
-      garante_dati_19_2: [],
-      domanda_recesso_conduttore_2_4: 'Sì, il Conduttore potrà recedere anticipatamente dando il preavviso',
-      recesso_conduttore_1_2_5: 6,
-      cedolare_secca_6_7: 'Si, il Locatore intende avvalersi della Cedolare Secca',
-      mobilio_12_2_6: 'Si, l\'immobile è arredato',
-      domanda_elenco_arredi_intero_7: 'Si, vorrei inserire ora il dettaglio degli arredi',
-      elenco_arredi_lista_intero_7: 'Divano, tavolo, sedie',
-      domanda_elenco_arredi_porzione_6: 'Si, vorrei inserire ora il dettaglio degli arredi',
-      elenco_arredi_lista_porzione_6: 'Letto, armadio',
-      blocco_immobile_29: [{ type: 'ABITATIVO', indirizzo: 'Via Verdi 1' }],
-      domanda_pertinenze_14_2_6: 'No, l\'immobile non viene locato con pertinenze registrate separatamente',
-      pertinenze_16_2_6: [],
-      domanda_ape_1_5: 'No, non conosco il codice identificativo dell\'Attestato di Prestazione Energetica',
-      numero_attestato_prestazione_energetica_3_6: 'ABC123',
-      locatore_4_3_6: [{ type: 'pf', nome: 'Mario', cognome: 'Rossi' }],
-      conduttore_4_3_6: [{ type: 'pf', nome: 'Giulia', cognome: 'Bianchi' }],
-      domanda_note_50_2: 'No',
-      note_49_2: 'No additional notes',
-      luogo_di_sottoscrizione_contratto_4_2_6: 'Milano',
-      data_di_sottoscrizione_contratto_4_2_6: '2025-10-30'
+      field1: 'value1',
+      field2: 'value2',
     },
     creation_fields: {
-      tipologia_locazione_20_4: "Viene affittato l'intero immobile",
-      indicazione_stanza_5: 'Soggiorno',
-      tipologia_contratto_14_5: 'Contratto Agevolato (3/4/5/6 + 2 anni)',
-      domanda_arredi_12: 'No, non è arredato (oppure è parzialmente arredato)',
-      domanda_note_22_5: 'No, va bene cosi',
-      note_34_5_1_1_1_2_1_1_7: 'No additional notes'
+      creation_field1: 'creation_value1',
     }
   };
 
-  it('submitContractInfo: success calls Step3 then Step4 with step3_id', async () => {
-    // Step 3 mock response
+  const mockStep3Schema = {
+    form: {
+      field1: {
+        question: 'Question 1?',
+        type: 'varchar',
+        field_subtype: 'STRING',
+        is_required: 1,
+      },
+      field2: {
+        question: 'Question 2?',
+        type: 'varchar',
+        field_subtype: 'STRING',
+        is_required: 1,
+      },
+    }
+  };
+
+  const mockStep4Schema = {
+    form: {
+      creation_field1: {
+        question: 'Creation Question?',
+        type: 'varchar',
+        field_subtype: 'STRING',
+        is_required: 1,
+      },
+    }
+  };
+
+  it('submitContractInfo: success calls GET → POST for Step3, then GET → POST for Step4', async () => {
+    // Mock GET responses for form schemas
+    (httpMock.instance.get as jest.Mock)
+      .mockResolvedValueOnce({ data: mockStep3Schema }) // Step 3 GET
+      .mockResolvedValueOnce({ data: mockStep4Schema }); // Step 4 GET
+
+    // Mock POST responses
     (httpMock.instance.post as jest.Mock)
-      .mockResolvedValueOnce({ data: { id: 'FORM123', status: 'ok' } }) // step 3
-      .mockResolvedValueOnce({ data: { documentId: 'DOC999', status: 'created' } }); // step 4
+      .mockResolvedValueOnce({ data: { id: 'FORM123', status: 'ok' } }) // Step 3 POST
+      .mockResolvedValueOnce({ data: { documentId: 'DOC999', status: 'created' } }); // Step 4 POST
 
     const res = await service.submitContractInfo(validPayload as any);
 
-    // verify two calls
+    // Verify GET calls (2 total)
+    expect(httpMock.instance.get).toHaveBeenCalledTimes(2);
+    const [getStep3Call, getStep4Call] = (httpMock.instance.get as jest.Mock).mock.calls;
+    expect(getStep3Call[0]).toContain('/api/v3/form/locazione-3-2-canone-concordato-milano');
+    expect(getStep4Call[0]).toContain('/api/v3/form/creazione-documenti-canone-concordato-milano');
+
+    // Verify POST calls (2 total)
     expect(httpMock.instance.post).toHaveBeenCalledTimes(2);
-    const [step3Call, step4Call] = (httpMock.instance.post as jest.Mock).mock.calls;
+    const [postStep3Call, postStep4Call] = (httpMock.instance.post as jest.Mock).mock.calls;
+    expect(postStep3Call[0]).toContain('/api/v3/form/locazione-3-2-canone-concordato-milano');
+    expect(postStep4Call[0]).toContain('/api/v3/form/creazione-documenti-canone-concordato-milano');
 
-    expect(step3Call[0]).toContain('/api/v3/form/locazione-3-2-canone-concordato-milano');
-    expect(step4Call[0]).toContain('/api/v3/form/creazione-documenti-canone-concordato-milano');
+    // Verify step3_id is injected in step4
+    expect(postStep4Call[1].form.step3_id).toEqual({ value: 'FORM123' });
 
-    // step4 payload must include step3_id
-    expect(step4Call[1]).toMatchObject(expect.objectContaining({ step3_id: 'FORM123' }));
-
-    // final result
+    // Final result
     expect(res.ok).toBe(true);
     expect(res.step3).toEqual({ id: 'FORM123', status: 'ok' });
     expect(res.step4).toEqual({ documentId: 'DOC999', status: 'created' });
   });
 
-  it('submitContractInfo: throws on Step 3 API error', async () => {
+  it('submitContractInfo: throws on Step 3 GET error', async () => {
+    (httpMock.instance.get as jest.Mock)
+      .mockRejectedValueOnce({ response: { data: { error: 'not found' } } });
+
+    await expect(service.submitContractInfo(validPayload as any)).rejects.toThrow('Error fetching Step 3 form schema');
+  });
+
+  it('submitContractInfo: throws on Step 3 POST error', async () => {
+    (httpMock.instance.get as jest.Mock)
+      .mockResolvedValueOnce({ data: mockStep3Schema });
+
     (httpMock.instance.post as jest.Mock)
       .mockRejectedValueOnce({ response: { data: { error: 'invalid' } } });
 
-    await expect(service.submitContractInfo(validPayload as any)).rejects.toThrow();
+    await expect(service.submitContractInfo(validPayload as any)).rejects.toThrow('Error while submitting Dokicasa Step 3 form');
   });
 
-  it('submitContractInfo: throws on Step 4 API error', async () => {
-    (httpMock.instance.post as jest.Mock)
-      .mockResolvedValueOnce({ data: { id: 'FORM123' } }) // step 3
-      .mockRejectedValueOnce({ response: { data: { error: 'creation failed' } } }); // step 4
-
-    await expect(service.submitContractInfo(validPayload as any)).rejects.toThrow();
-  });
-
-  it('submitContractInfo: throws on Step 3 validation missing fields', async () => {
+  it('submitContractInfo: throws on Step 3 validation missing required fields', async () => {
     const invalidPayload = {
       ...validPayload,
       fields: {} // missing required fields
     };
 
-    await expect(service.submitContractInfo(invalidPayload as any)).rejects.toThrow();
+    (httpMock.instance.get as jest.Mock)
+      .mockResolvedValueOnce({ data: mockStep3Schema });
 
-    // Should not call any APIs
+    await expect(service.submitContractInfo(invalidPayload as any)).rejects.toThrow('Missing required fields for Step 3');
+
+    // Should GET schema but not POST
+    expect(httpMock.instance.get).toHaveBeenCalledTimes(1);
     expect(httpMock.instance.post).not.toHaveBeenCalled();
   });
 
-  it('submitContractInfo: throws on Step 4 validation missing fields', async () => {
+  it('submitContractInfo: throws on Step 4 validation missing required fields', async () => {
     const invalidPayload = {
       ...validPayload,
       creation_fields: {} // missing required fields for step 4
     };
 
-    // Step 3 should succeed
+    // Step 3 succeeds
+    (httpMock.instance.get as jest.Mock)
+      .mockResolvedValueOnce({ data: mockStep3Schema }) // Step 3 GET
+      .mockResolvedValueOnce({ data: mockStep4Schema }); // Step 4 GET
+
     (httpMock.instance.post as jest.Mock)
-      .mockResolvedValueOnce({ data: { id: 'FORM123', status: 'ok' } });
+      .mockResolvedValueOnce({ data: { id: 'FORM123', status: 'ok' } }); // Step 3 POST
 
-    await expect(service.submitContractInfo(invalidPayload as any)).rejects.toThrow();
+    await expect(service.submitContractInfo(invalidPayload as any)).rejects.toThrow('Missing required fields for Step 4');
 
-    // Should call Step 3 API but not Step 4
+    // Should call Step 3 GET+POST and Step 4 GET, but not Step 4 POST
+    expect(httpMock.instance.get).toHaveBeenCalledTimes(2);
     expect(httpMock.instance.post).toHaveBeenCalledTimes(1);
   });
 });

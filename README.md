@@ -40,7 +40,7 @@ src/
 │   └── http.module.ts
 └── mapping/                # Field mapping & validation
     ├── mapping.service.ts
-    ├── required-fields.ts
+    ├── external-ids.ts
     └── *.spec.ts
 ```
 
@@ -128,6 +128,13 @@ All endpoints are prefixed with `/api/v1`
 
 **Description:** Validates and submits contract information to Dokicasa, executing both Step 3 (form submission) and Step 4 (document creation) sequentially.
 
+**How it works:**
+1. **GET** form schema from Dokicasa for Step 3
+2. **Merge** your field values into the schema
+3. **Validate** required fields based on Dokicasa's `is_required` flags
+4. **POST** the merged form to Dokicasa (Step 3)
+5. **Repeat** for Step 4 (with `step3_id` injection)
+
 **Request Body:**
 
 ```json
@@ -149,9 +156,12 @@ All endpoints are prefixed with `/api/v1`
     "domanda_arredi_12": "No, non è arredato",
     "domanda_note_22_5": "No, va bene così"
     // ... more fields required for Step 4
-  }
+  },
+  "external_id": "32727_4"  // Optional - defaults to city-specific value
 }
 ```
+
+**Note:** Form metadata (questions, types, subtypes, required flags) is dynamically fetched from Dokicasa's API, not hardcoded.
 
 **Supported Cities:**
 
@@ -244,7 +254,9 @@ The application follows a modular architecture:
 
 2. **Service Layer** (`dokicasa.service.ts`)
    - Business logic and orchestration
-   - Sequential validation: Step 3 → Step 4
+   - Dynamic form schema fetching from Dokicasa
+   - Value merging and validation
+   - Sequential processing: GET → merge → validate → POST (Step 3 → Step 4)
    - Error handling and API communication
 
 3. **Data Mapping** (`mapping.service.ts`)

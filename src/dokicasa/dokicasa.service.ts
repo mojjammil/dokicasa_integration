@@ -3,7 +3,12 @@ import { HttpService } from '../http/http.service';
 import { FormResolverService } from './form-resolver.service';
 import { SubmitClientPayloadDto } from './dto/submit-client-payload.dto';
 import { MappingService } from '../mapping/mapping.service';
-import { REQUIRED_REGISTRY, REQUIRED_STEP4_BY_CITY, City, ContractType } from '../mapping/required-fields';
+import { City, EXTERNAL_IDS } from '../mapping/external-ids';
+
+type ContractType =
+  | 'locazione-3-2-canone'
+  | 'locazione-transitoria-canone'
+  | 'locazione-studenti-universitari';
 
 @Injectable()
 export class DokicasaService {
@@ -19,17 +24,16 @@ export class DokicasaService {
     return { Authorization: `Bearer ${token}` };
   }
 
-  private spec(city: City, contractType: ContractType) {
-    const s = REQUIRED_REGISTRY[city]?.[contractType];
-    if (!s) throw new BadRequestException(`Unsupported combination city=${city} contract_type=${contractType}`);
-    return s;
+  private validateRequired(formSchema: Record<string, any>): string[] {
+    const missing: string[] = [];
+    for (const [fieldId, fieldMeta] of Object.entries(formSchema)) {
+      if (fieldMeta.is_required && (!fieldMeta.value || fieldMeta.value === '')) {
+        missing.push(fieldId);
+      }
+    }
+    return missing;
   }
 
-  private missing(requiredList: string[], provided: Record<string, any>): string[] {
-    return requiredList.filter((f) => !(f in provided) || provided[f] === undefined || provided[f] === null || provided[f] === '');
-  }
-
-  /** Validate ➜ Step 3 ➜ Validate ➜ Step 4 */
   async submitContractInfo(payload: SubmitClientPayloadDto) {
     const city = payload.city as City;
     const contractType = payload.contract_type as ContractType;
@@ -38,29 +42,44 @@ export class DokicasaService {
     const step3Url = this.resolver.resolveStep3Url(city, contractType);
     const step4Url = this.resolver.resolveStep4Url(city);
 
-    // Map data
-    const mappedStep3 = this.mapping.mapStep3(city, contractType, payload.fields || {});
-    const mappedStep4 = this.mapping.mapStep4(city, payload.creation_fields || {});
+    const externalId = payload.external_id || EXTERNAL_IDS[city];
 
-    // Step 3 Validation
-    const spec = this.spec(city, contractType);
-    const miss3 = this.missing(spec.step3, mappedStep3);
+    let step3Schema: Record<string, any>;
+    try {
+      const getResponse = await this.http.instance.get(step3Url, { headers });
+      step3Schema = getResponse.data?.form || getResponse.data || {};
+    } catch (e: any) {
+      throw new InternalServerErrorException({
+        code: 'DOKICASA_GET_ERROR',
+        message: 'Error fetching Step 3 form schema',
+        detail: e?.response?.data || e?.message,
+        endpoint: step3Url,
+      });
+    }
 
-    if (miss3.length) {
+    const mergedStep3 = this.mapping.mergeValues(step3Schema, payload.fields || {});
+
+    const missingStep3 = this.validateRequired(mergedStep3);
+    if (missingStep3.length) {
       throw new BadRequestException({
         code: 'VALIDATION_ERROR',
         message: 'Missing required fields for Step 3',
         details: {
-          step3: { missing: miss3 },
+          step3: { missing: missingStep3 },
         },
       });
     }
 
-    // Step 3 API Call
     let step3Data: any;
     try {
-      const r = await this.http.instance.post(step3Url, mappedStep3, { headers });
-      step3Data = r.data;
+      const step3Body = {
+        form: mergedStep3,
+        metadata: {
+          external_id: externalId,
+        },
+      };
+      const postResponse = await this.http.instance.post(step3Url, step3Body, { headers });
+      step3Data = postResponse.data;
     } catch (e: any) {
       throw new InternalServerErrorException({
         code: 'DOKICASA_FORM_ERROR',
@@ -70,35 +89,47 @@ export class DokicasaService {
       });
     }
 
-    // Step 4 Validation
-    const miss4 = this.missing(REQUIRED_STEP4_BY_CITY[city], mappedStep4);
+    let step4Schema: Record<string, any>;
+    try {
+      const getResponse = await this.http.instance.get(step4Url, { headers });
+      step4Schema = getResponse.data?.form || getResponse.data || {};
+    } catch (e: any) {
+      throw new InternalServerErrorException({
+        code: 'DOKICASA_GET_ERROR',
+        message: 'Error fetching Step 4 form schema',
+        detail: e?.response?.data || e?.message,
+        endpoint: step4Url,
+      });
+    }
 
-    if (miss4.length) {
+    const mergedStep4 = this.mapping.mergeValues(step4Schema, payload.creation_fields || {});
+
+    const missingStep4 = this.validateRequired(mergedStep4);
+    if (missingStep4.length) {
       throw new BadRequestException({
         code: 'VALIDATION_ERROR',
         message: 'Missing required fields for Step 4',
         details: {
-          step4: { missing: miss4 },
+          step4: { missing: missingStep4 },
         },
       });
     }
 
-    // Step 4: inject step3 id if present
-    const step3Id =
-      step3Data?.id ||
-      step3Data?.uuid ||
-      step3Data?.formId ||
-      undefined;
-
-    const step4Payload = {
-      ...mappedStep4,
-      ...(step3Id ? { step3_id: step3Id } : {}),
-    };
+    const step3Id = step3Data?.id || step3Data?.uuid || step3Data?.formId;
+    if (step3Id) {
+      mergedStep4.step3_id = { value: step3Id };
+    }
 
     let step4Data: any;
     try {
-      const r = await this.http.instance.post(step4Url, step4Payload, { headers });
-      step4Data = r.data;
+      const step4Body = {
+        form: mergedStep4,
+        metadata: {
+          external_id: externalId,
+        },
+      };
+      const postResponse = await this.http.instance.post(step4Url, step4Body, { headers });
+      step4Data = postResponse.data;
     } catch (e: any) {
       throw new InternalServerErrorException({
         code: 'DOKICASA_CREATION_ERROR',
