@@ -115,11 +115,6 @@ export class DokicasaService {
       });
     }
 
-    const step3Id = step3Data?.id || step3Data?.uuid || step3Data?.formId;
-    if (step3Id) {
-      mergedStep4.step3_id = { value: step3Id };
-    }
-
     let step4Data: any;
     try {
       const step4Body = {
@@ -128,6 +123,7 @@ export class DokicasaService {
           external_id: externalId,
         },
       };
+
       const postResponse = await this.http.instance.post(step4Url, step4Body, { headers });
       step4Data = postResponse.data;
     } catch (e: any) {
