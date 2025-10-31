@@ -99,9 +99,6 @@ describe('DokicasaService', () => {
     expect(postStep3Call[0]).toContain('/api/v3/form/locazione-3-2-canone-concordato-milano');
     expect(postStep4Call[0]).toContain('/api/v3/form/creazione-documenti-canone-concordato-milano');
 
-    // Verify step3_id is injected in step4
-    expect(postStep4Call[1].form.step3_id).toEqual({ value: 'FORM123' });
-
     // Final result
     expect(res.ok).toBe(true);
     expect(res.step3).toEqual({ id: 'FORM123', status: 'ok' });

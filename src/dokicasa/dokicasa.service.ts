@@ -81,10 +81,21 @@ export class DokicasaService {
       const postResponse = await this.http.instance.post(step3Url, step3Body, { headers });
       step3Data = postResponse.data;
     } catch (e: any) {
+      const errorData = e?.response?.data;
+      // Dokicasa sometimes returns "Validation failed" with has_errors:false when fields are filtered
+      // Check if it's actually a field filtering issue vs real validation error
+      if (errorData?.messages?.has_errors === false && errorData?.messages?.errors?.length === 0) {
+        throw new BadRequestException({
+          code: 'DOKICASA_FILTERED_FIELDS',
+          message: 'Dokicasa filtered some fields from your request. You may have sent fields that don\'t exist in the schema or don\'t match conditional dependencies.',
+          detail: errorData,
+          endpoint: step3Url,
+        });
+      }
       throw new InternalServerErrorException({
         code: 'DOKICASA_FORM_ERROR',
         message: 'Error while submitting Dokicasa Step 3 form',
-        detail: e?.response?.data || e?.message,
+        detail: errorData || e?.message,
         endpoint: step3Url,
       });
     }
@@ -127,10 +138,21 @@ export class DokicasaService {
       const postResponse = await this.http.instance.post(step4Url, step4Body, { headers });
       step4Data = postResponse.data;
     } catch (e: any) {
+      const errorData = e?.response?.data;
+      // Dokicasa sometimes returns "Validation failed" with has_errors:false when fields are filtered
+      // Check if it's actually a field filtering issue vs real validation error
+      if (errorData?.messages?.has_errors === false && errorData?.messages?.errors?.length === 0) {
+        throw new BadRequestException({
+          code: 'DOKICASA_FILTERED_FIELDS',
+          message: 'Dokicasa filtered some fields from your request. You may have sent fields that don\'t exist in the schema or don\'t match conditional dependencies.',
+          detail: errorData,
+          endpoint: step4Url,
+        });
+      }
       throw new InternalServerErrorException({
         code: 'DOKICASA_CREATION_ERROR',
         message: 'Error while creating Dokicasa documents (Step 4)',
-        detail: e?.response?.data || e?.message,
+        detail: errorData || e?.message,
         endpoint: step4Url,
       });
     }
